@@ -1,33 +1,51 @@
 #pragma once
 
-//uint8_t lastChar;
-//uint8_t tokenType;	//	1 number, 2 id
-//uint8_t lengthOrDelimiter;
-
-void token_unknown(uint8_t c);
-void token_number(uint8_t c);
-void token_id(uint8_t c);
-
-//	scan function pointer
-void (*scanFunction)(uint8_t c) = &token_unknown;
-
-void token_number(uint8_t c) {
-	if (c == ' ' || c == '\n'  || c == '\r') return;
-	scanFunction = &token_unknown; return;
+void scanLine_p(const __flash uint8_t * address, uint8_t * store) {
+	uint8_t c; uint8_t tokens = 0;
+	do {
+		c = *address++;
+		revisit:
+		if (c == 0) { Tokens = tokens; return; }
+		while(c == ' ') { c = *address++; }
+		// number
+		if (c >= '0' && c <= '9') {
+			do {
+				*store++ = c;
+				c = *address++;
+				while (c == '_') { c = *address++; }
+			} while (c >= '0' && c <= '9');
+			tokens++;
+			goto revisit;
+		}
+		// name
+		if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_') {
+			do {
+				*store++ = c;
+				c = *address++;
+			} while ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || (c >= '0' && c <= '9'));
+			tokens++;
+			goto revisit;
+		}
+		*store++ = c;
+	} while (c != 0);
 }
 
-void token_id(uint8_t c) {
-	if (c >= '0' && c <= '9' ) { return; }
-	if (c >= 'A' && c <= 'Z' ) { return; }
-	if (c >= 'a' && c <= 'z' ) { return; }
-	scanFunction = &token_unknown; return;
-}
-
-void token_unknown(uint8_t c) {
-	if (c == '\n' || c == '\r') return;
-	if (c == ' ') return;
-	if (c >= '0' && c <= '9' ) { scanFunction =& token_number; return; }
-	if (c >= 'A' && c <= 'Z' ) { scanFunction =& token_id; return; }
-	if (c >= 'a' && c <= 'z' ) { scanFunction =& token_id; return; }
-	return;
+void scanLine_c(const uint8_t * address, uint8_t * store) {
+	uint8_t u;
+	
+	do
+	{
+		u = *address++;
+		unknown:
+		if((u >= 'A') && (u <= 'z')) {
+			if((u <= 'Z') || (u >= 'a')) {
+				do
+				{
+					*store++ = u;
+					u = *address++;
+				} while ((u >= 'a') && (u <= 'z'));
+				goto unknown;
+			}
+		}
+	} while (u != 0);
 }
